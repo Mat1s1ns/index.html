@@ -57,7 +57,8 @@ function performSave() {
 function filterBooks() {
   const searchNosaukums = document.getElementById("searchNosaukums").value.toLowerCase();
   const searchDaudzums = document.getElementById("searchDaudzums").value;
-  const searchCena = document.getElementById("searchCena").value;
+  const searchCenaMin = parseFloat(document.getElementById("searchCenaMin").value) || 0;
+  const searchCenaMax = parseFloat(document.getElementById("searchCenaMax").value) || Infinity;  
   const searchDatums = document.getElementById("searchDatums").value;
 
   const tbody = document.querySelector("#gramatuApkopojums tbody");
@@ -67,9 +68,7 @@ function filterBooks() {
     .filter(book => {
       const matchesNosaukums = book.Nosaukums.toLowerCase().includes(searchNosaukums);
       const matchesDaudzums = searchDaudzums === "" || book.Daudzums.toString().startsWith(searchDaudzums);
-      const matchesCena = searchCena === "" || book.Cena.toString().startsWith(searchCena);
-      const matchesDatums = searchDatums === "" || book.Datums === searchDatums;
-      return matchesNosaukums && matchesDaudzums && matchesCena && matchesDatums;
+      const matchesCena = book.Cena >= searchCenaMin && book.Cena <= searchCenaMax;            return matchesNosaukums && matchesDaudzums && matchesCena && matchesDatums;
     })
     .forEach(book => {
       const row = document.createElement("tr");
