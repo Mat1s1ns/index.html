@@ -3,6 +3,7 @@ let nextId = 1;
 let modalAction = null;
 let modalBookId = null;
 let currentEditId = null;
+
 document.addEventListener("DOMContentLoaded", () => {
   const poga = document.getElementById("apstiprinasanasPoga");
   if (poga) {
@@ -19,23 +20,35 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-function performSave() {
-  closeModal("confirmationModal");
+function performSave(isEditing = false) {
+  const prefix = isEditing ? "_edit" : "";
 
-  const isEditing = currentEditId !== null;
-  const fieldPrefix = isEditing ? "_edit" : "";
+  const nosaukumsEl = document.getElementById("nosaukums" + prefix);
+  const daudzumsEl = document.getElementById("daudzums" + prefix);
+  const cenaEl = document.getElementById("cena" + prefix);
+  const datumsEl = document.getElementById("datums" + prefix);
 
-  const nosaukums = document.getElementById("nosaukums" + fieldPrefix).value.trim();
-  const daudzums = parseInt(document.getElementById("daudzums" + fieldPrefix).value) || 0;
-  const cena = parseFloat(document.getElementById("cena" + fieldPrefix).value) || 0;
-  const datums = document.getElementById("datums" + fieldPrefix).value;
+  if (!nosaukumsEl || !daudzumsEl || !cenaEl || !datumsEl) {
+    alert("Nepieciešamie lauki nav atrasti!");
+    return;
+  }
+
+  const nosaukums = nosaukumsEl.value.trim();
+  const daudzums = parseInt(daudzumsEl.value, 10);
+  const cena = parseFloat(cenaEl.value);
+  const datums = datumsEl.value;
+
+  if (!nosaukums || isNaN(daudzums) || isNaN(cena) || !datums) {
+    alert("Lūdzu, aizpildi visus laukus pareizi.");
+    return;
+  }
 
   const book = {
     id: isEditing ? currentEditId : nextId,
     Nosaukums: nosaukums,
     Daudzums: daudzums,
     Cena: cena,
-    Datums: datums
+    Datums: datums,
   };
 
   if (isEditing) {
@@ -51,14 +64,15 @@ function performSave() {
   currentEditId = null;
   clearForm();
   filterBooks();
-  closeModal("confirmEditModal");
+  closeModal(isEditing ? "confirmEditModal" : "bookInputModal");
 }
 
 function filterBooks() {
   const searchNosaukums = document.getElementById("searchNosaukums").value.toLowerCase();
-  const searchDaudzums = document.getElementById("searchDaudzums").value;
+  const searchDaudzumsMin = parseInt(document.getElementById("searchDaudzumsMin").value) || 0;
+  const searchDaudzumsMax = parseInt(document.getElementById("searchDaudzumsMax").value) || Infinity;
   const searchCenaMin = parseFloat(document.getElementById("searchCenaMin").value) || 0;
-  const searchCenaMax = parseFloat(document.getElementById("searchCenaMax").value) || Infinity;  
+  const searchCenaMax = parseFloat(document.getElementById("searchCenaMax").value) || Infinity;
   const searchDatums = document.getElementById("searchDatums").value;
 
   const tbody = document.querySelector("#gramatuApkopojums tbody");
@@ -67,20 +81,22 @@ function filterBooks() {
   books
     .filter(book => {
       const matchesNosaukums = book.Nosaukums.toLowerCase().includes(searchNosaukums);
-      const matchesDaudzums = searchDaudzums === "" || book.Daudzums.toString().startsWith(searchDaudzums);
-      const matchesCena = book.Cena >= searchCenaMin && book.Cena <= searchCenaMax;            return matchesNosaukums && matchesDaudzums && matchesCena && matchesDatums;
+      const matchesDaudzums = book.Daudzums >= searchDaudzumsMin && book.Daudzums <= searchDaudzumsMax;      const matchesCena = book.Cena >= searchCenaMin && book.Cena <= searchCenaMax;
+      const matchesDatums = searchDatums === "" || book.Datums === searchDatums;
+
+      return matchesNosaukums && matchesDaudzums && matchesCena && matchesDatums;
     })
     .forEach(book => {
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td>${book.id}</td>
-        <td>${book.Nosaukums}</td>
-        <td>${book.Daudzums}</td>
-        <td>€${book.Cena.toFixed(2)}</td>
-        <td>${book.Datums}</td>
-        <td>
-          <button onclick="editBook(${book.id})">Labot</button>
-          <button onclick="dzest(${book.id})">Dzēst</button>
+        <td class="text-center">${book.id}</td>
+        <td class="text-left">${book.Nosaukums}</td>
+        <td class="text-center">${book.Daudzums}</td>
+        <td class="text-center">€${book.Cena.toFixed(2)}</td>
+        <td class="text-center">${book.Datums}</td>
+        <td class="text-center">
+            <button onclick="editBook(${book.id})">Labot</button>
+            <button onclick="dzest(${book.id})">Dzēst</button>
         </td>
       `;
       tbody.appendChild(row);
@@ -135,8 +151,10 @@ function Turpinat(id) {
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
-    modal.classList.add("show");
-    modal.style.display = "flex";
+    modal.classList.remove("show");
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 300);
   }
 }
 function closeModal(id) {
@@ -156,7 +174,58 @@ function showModal(id) {
     }, 10);
     }
 }
-function saveBook(e) {
-  e.preventDefault();
-  performSave();
+function saveBook(event) {
+  event.preventDefault();
+
+  const isEditing = !!document.getElementById("mainit").value;
+  performSave(isEditing);
+
+ 
+}
+function performSave(isEditing = false) {
+  // Priekš daudzuma lauka pielieto prefix, pārējiem – bez
+  const prefixDaudzums = isEditing ? "_edit" : "";
+
+  const nosaukumsEl = document.getElementById("nosaukums");
+  const daudzumsEl = document.getElementById("daudzums" + prefixDaudzums);
+  const cenaEl = document.getElementById("cena");
+  const datumsEl = document.getElementById("datums");
+
+  if (!nosaukumsEl || !daudzumsEl || !cenaEl || !datumsEl) {
+    alert("Nepieciešamie lauki nav atrasti!");
+    return;
+  }
+
+  const nosaukums = nosaukumsEl.value.trim();
+  const daudzums = parseInt(daudzumsEl.value, 10);
+  const cena = parseFloat(cenaEl.value);
+  const datums = datumsEl.value;
+
+  if (!nosaukums || isNaN(daudzums) || isNaN(cena) || !datums) {
+    alert("Lūdzu, aizpildi visus laukus pareizi.");
+    return;
+  }
+
+  const book = {
+    id: isEditing ? currentEditId : nextId,
+    Nosaukums: nosaukums,
+    Daudzums: daudzums,
+    Cena: cena,
+    Datums: datums,
+  };
+
+  if (isEditing) {
+    const index = books.findIndex(b => b.id === currentEditId);
+    if (index !== -1) {
+      books[index] = book;
+    }
+  } else {
+    books.push(book);
+    nextId++;
+  }
+
+  currentEditId = null;
+  clearForm();
+  filterBooks();
+  closeModal(isEditing ? "confirmEditModal" : "bookInputModal");
 }
