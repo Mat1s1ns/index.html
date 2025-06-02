@@ -136,17 +136,27 @@ function Turpinat(id) {
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
-    modal.style.display = "none";
+    modal.classList.add("show");
+    modal.style.display = "flex";
   }
 }
-
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove("show");
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 300);   }
+}
 function showModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
-    modal.style.display = "block";
-  }
+    modal.style.display = "flex";          !
+    setTimeout(() => {
+      modal.classList.add("show");          
+    }, 10);
+    }
 }
-
 function saveBook(e) {
   e.preventDefault();
   performSave();
