@@ -1,15 +1,30 @@
 let books = [];
 let nextId = 1;
-let currentEditId = null;
 let modalAction = null;
 let modalBookId = null;
+let currentEditId = null;
+document.addEventListener("DOMContentLoaded", () => {
+  const poga = document.getElementById("apstiprinasanasPoga");
+  if (poga) {
+    poga.addEventListener("click", function () {
+      if (modalAction === "edit") {
+        Turpinat(modalBookId);
+      } else if (modalAction === "delete") {
+        dzestApstiprinajums(modalBookId);
+        closeModal("confirmationModal");
+      }
+    });
+  } else {
+    console.warn("Poga 'apstiprinasanasPoga' netika atrasta");
+  }
+});
 
-function saveBook(event) {
-  event.preventDefault();
+function performSave() {
+  closeModal("confirmationModal");
 
   const isEditing = currentEditId !== null;
-
   const fieldPrefix = isEditing ? "_edit" : "";
+
   const nosaukums = document.getElementById("nosaukums" + fieldPrefix).value.trim();
   const daudzums = parseInt(document.getElementById("daudzums" + fieldPrefix).value) || 0;
   const cena = parseFloat(document.getElementById("cena" + fieldPrefix).value) || 0;
@@ -33,31 +48,52 @@ function saveBook(event) {
     nextId++;
   }
 
-  renderTable();
-  clearForm();
-  closeModal("editFormModal");
   currentEditId = null;
-
+  clearForm();
+  filterBooks();
+  closeModal("confirmEditModal");
 }
 
-function renderTable() {
+function filterBooks() {
+  const searchNosaukums = document.getElementById("searchNosaukums").value.toLowerCase();
+  const searchDaudzums = document.getElementById("searchDaudzums").value;
+  const searchCena = document.getElementById("searchCena").value;
+  const searchDatums = document.getElementById("searchDatums").value;
+
   const tbody = document.querySelector("#gramatuApkopojums tbody");
   tbody.innerHTML = "";
 
-  books.forEach(book => {
-    const row = document.createElement("tr");
-    row.innerHTML = 
-      <td>${book.id}</td>
-      <td>${book.Nosaukums}</td>
-      <td>${book.Daudzums}</td>
-      <td>€${book.Cena.toFixed(2)}</td>
-      <td>${book.Datums}</td>
-      <td>
-        <button onclick="editBook(${book.id})">Labot</button>
-        <button onclick="dzest(${book.id})">Dzēst</button>
-      </td>
-    ;
-    tbody.appendChild(row);
+  books
+    .filter(book => {
+      const matchesNosaukums = book.Nosaukums.toLowerCase().includes(searchNosaukums);
+      const matchesDaudzums = searchDaudzums === "" || book.Daudzums.toString().startsWith(searchDaudzums);
+      const matchesCena = searchCena === "" || book.Cena.toString().startsWith(searchCena);
+      const matchesDatums = searchDatums === "" || book.Datums === searchDatums;
+      return matchesNosaukums && matchesDaudzums && matchesCena && matchesDatums;
+    })
+    .forEach(book => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${book.id}</td>
+        <td>${book.Nosaukums}</td>
+        <td>${book.Daudzums}</td>
+        <td>€${book.Cena.toFixed(2)}</td>
+        <td>${book.Datums}</td>
+        <td>
+          <button onclick="editBook(${book.id})">Labot</button>
+          <button onclick="dzest(${book.id})">Dzēst</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+}
+function clearForm() {
+  [
+    "nosaukums", "daudzums", "cena", "datums",
+    "nosaukums_edit", "daudzums_edit", "cena_edit", "datums_edit"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
   });
 }
 
@@ -70,7 +106,7 @@ function dzest(id) {
 
 function dzestApstiprinajums(id) {
   books = books.filter(b => b.id !== id);
-  renderTable();
+  filterBooks();
 }
 
 function editBook(id) {
@@ -86,38 +122,32 @@ function Turpinat(id) {
 
   currentEditId = book.id;
 
+
   document.getElementById("nosaukums_edit").value = book.Nosaukums;
   document.getElementById("daudzums_edit").value = book.Daudzums;
   document.getElementById("cena_edit").value = book.Cena;
   document.getElementById("datums_edit").value = book.Datums;
 
-  closeModal("confirmationModal")
+  closeModal("confirmationModal");
   showModal("confirmEditModal");
-}
-
-function clearForm() {
-  const ids = ["nosaukums", "daudzums", "cena", "datums", "nosaukums_edit", "daudzums_edit", "cena_edit", "datums_edit"];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
-  });
-}
-
-function showModal(id) {
-  document.getElementById(id).style.display = "block";
+  
 }
 
 function closeModal(id) {
-  document.getElementById(id).style.display = "none";
-  modalAction = null;
-  modalBookId = null;
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.style.display = "none";
+  }
 }
 
-document.getElementById("confirmBtn").onclick = function () {
-  if (modalAction === "delete") {
-    dzestApstiprinajums(modalBookId);
-    closeModal("confirmationModal");
-  } else if (modalAction === "edit") {
-    Turpinat(modalBookId); 
+function showModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.style.display = "block";
   }
-};
+}
+
+function saveBook(e) {
+  e.preventDefault();
+  performSave();
+}
