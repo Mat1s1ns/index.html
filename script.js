@@ -73,7 +73,8 @@ function filterBooks() {
   const searchDaudzumsMax = parseInt(document.getElementById("searchDaudzumsMax").value) || Infinity;
   const searchCenaMin = parseFloat(document.getElementById("searchCenaMin").value) || 0;
   const searchCenaMax = parseFloat(document.getElementById("searchCenaMax").value) || Infinity;
-  const searchDatums = document.getElementById("searchDatums").value;
+  const searchDatumsNo = document.getElementById("searchDatumsNo").value;
+  const searchDatumsLidz = document.getElementById("searchDatumsLidz").value;
 
   const tbody = document.querySelector("#gramatuApkopojums tbody");
   tbody.innerHTML = "";
@@ -81,8 +82,16 @@ function filterBooks() {
   books
     .filter(book => {
       const matchesNosaukums = book.Nosaukums.toLowerCase().includes(searchNosaukums);
-      const matchesDaudzums = book.Daudzums >= searchDaudzumsMin && book.Daudzums <= searchDaudzumsMax;      const matchesCena = book.Cena >= searchCenaMin && book.Cena <= searchCenaMax;
-      const matchesDatums = searchDatums === "" || book.Datums === searchDatums;
+      const matchesDaudzums = book.Daudzums >= searchDaudzumsMin && book.Daudzums <= searchDaudzumsMax;
+      const matchesCena = book.Cena >= searchCenaMin && book.Cena <= searchCenaMax;
+
+      const bookDate = new Date(book.Datums);
+      const fromDate = searchDatumsNo ? new Date(searchDatumsNo) : null;
+      const toDate = searchDatumsLidz ? new Date(searchDatumsLidz) : null;
+
+      const matchesDatums =
+        (!fromDate || bookDate >= fromDate) &&
+        (!toDate || bookDate <= toDate);
 
       return matchesNosaukums && matchesDaudzums && matchesCena && matchesDatums;
     })
