@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grāmatu DB</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body { font-size: 14px; background: #f4f6f9; }
+    h2 { background-color: rgb(97,253,7); text-align: center; padding: 10px; }
+    .section { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .section h5 { border-bottom: 2px solid #61fd07; padding-bottom: 6px; margin-bottom: 12px; }
+    table { font-size: 13px; }
+    th { background-color: #e6ffe6; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: 12px; max-height: 200px; overflow: auto; }
+    .btn-green { background-color: rgb(69,165,14); color: white; border: none; }
+    .btn-green:hover { background-color: rgb(50,130,10); color: white; }
+    input, select { font-size: 13px !important; }
+    .tab-btn { cursor: pointer; padding: 8px 18px; border: 2px solid #ccc; border-radius: 20px; background: white; font-size: 13px; }
+    .tab-btn.active { background: rgb(97,253,7); border-color: rgb(50,200,0); font-weight: 600; }
+    #status { font-size: 12px; color: green; min-height: 18px; }
+  </style>
+</head>
+<body>
+<h2>📚 Grāmatu DB (SQLite3)</h2>
+
+<div class="container mt-3">
+  <div id="loadingMsg" class="text-center text-muted py-4">⏳ Ielādē SQLite...</div>
+  <div id="mainContent" style="display:none">
+
+    <!-- Tabs -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <button class="tab-btn active" onclick="showTab('gramatas')">📖 Grāmatas</button>
+      <button class="tab-btn" onclick="showTab('lietotaji')">👤 Lietotāji</button>
+      <button class="tab-btn" onclick="showTab('rezervacijas')">📋 Rezervācijas</button>
+      <button class="tab-btn" onclick="showTab('sql')">🛠 SQL</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- GRĀMATAS -->
+    <div id="tab-gramatas">
+      <div class="section">
+        <h5>Pievienot grāmatu</h5>
+        <div class="row g-2">
+          <div class="col-sm-3"><input id="g_autors" class="form-control form-control-sm" placeholder="Autors" /></div>
+          <div class="col-sm-4"><input id="g_nosaukums" class="form-control form-control-sm" placeholder="Nosaukums" /></div>
+          <div class="col-sm-3"><input id="g_id" class="form-control form-control-sm" placeholder="GramataID (unikāls)" /></div>
+          <div class="col-sm-2"><button class="btn btn-green btn-sm w-100" onclick="addGramata()">Pievienot</button></div>
+        </div>
+      </div>
+      <div class="section">
+        <h5>Grāmatu saraksts</h5>
+        <div class="table-responsive"><table class="table table-bordered table-striped" id="tbl-gramatas"><thead><tr><th>GramataID</th><th>Autors</th><th>Nosaukums</th><th>Darbība</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- LIETOTĀJI -->
+    <div id="tab-lietotaji" style="display:none">
+      <div class="section">
+        <h5>Pievienot lietotāju</h5>
+        <div class="row g-2">
+          <div class="col-sm-4"><input id="l_id" class="form-control form-control-sm" placeholder="LietotajaID (unikāls)" /></div>
+          <div class="col-sm-4"><input id="l_vards" class="form-control form-control-sm" placeholder="Lietotāja vārds" /></div>
+          <div class="col-sm-4"><button class="btn btn-green btn-sm w-100" onclick="addLietotajs()">Pievienot</button></div>
+        </div>
+      </div>
+      <div class="section">
+        <h5>Lietotāju saraksts</h5>
+        <div class="table-responsive"><table class="table table-bordered table-striped" id="tbl-lietotaji"><thead><tr><th>LietotajaID</th><th>Vārds</th><th>Rezervāciju vēsture</th><th>Darbība</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- REZERVĀCIJAS -->
+    <div id="tab-rezervacijas" style="display:none">
+      <div class="section">
+        <h5>Pievienot rezervāciju</h5>
+        <div class="row g-2">
+          <div class="col-sm-3"><input id="r_id" class="form-control form-control-sm" placeholder="RezervacijasID (unikāls)" /></div>
+          <div class="col-sm-3">
+            <select id="r_lietotajs" class="form-select form-select-sm"><option value="">-- Lietotājs --</option></select>
+          </div>
+          <div class="col-sm-3">
+            <select id="r_gramata" class="form-select form-select-sm"><option value="">-- Grāmata --</option></select>
+          </div>
+          <div class="col-sm-3"><button class="btn btn-green btn-sm w-100" onclick="addRezervacija()">Rezervēt</button></div>
+        </div>
+      </div>
+      <div class="section">
+        <h5>Rezervāciju saraksts</h5>
+        <div class="table-responsive"><table class="table table-bordered table-striped" id="tbl-rezervacijas"><thead><tr><th>RezervacijasID</th><th>Lietotājs</th><th>Grāmata</th><th>Datums</th><th>Darbība</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- SQL KONSOLE -->
+    <div id="tab-sql" style="display:none">
+      <div class="section">
+        <h5>SQL konsole</h5>
+        <textarea id="sqlInput" class="form-control mb-2" rows="4" style="font-family:monospace;font-size:13px;">SELECT * FROM Gramatas;</textarea>
+        <button class="btn btn-green btn-sm mb-2" onclick="runSQL()">▶ Izpildīt</button>
+        <pre id="sqlOutput">-- Rezultāts parādīsies šeit --</pre>
+      </div>
+      <div class="section">
+        <h5>DB shēma</h5>
+        <pre>CREATE TABLE Gramatas (
+  GramataID   TEXT PRIMARY KEY,
+  Autors      TEXT NOT NULL,
+  Nosaukums   TEXT NOT NULL
+);
+
+CREATE TABLE Lietotaji (
+  LietotajaID         TEXT PRIMARY KEY,
+  LietotajaVards      TEXT NOT NULL,
+  RezervacijasVesture TEXT DEFAULT ''
+);
+
+CREATE TABLE Rezervacija (
+  RezervacijasID TEXT PRIMARY KEY,
+  LietotajaID    TEXT REFERENCES Lietotaji(LietotajaID),
+  GramataID      TEXT REFERENCES Gramatas(GramataID),
+  Datums         TEXT
+);</pre>
+      </div>
+    </div>
+
+  </div><!-- /mainContent -->
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:10px;padding:24px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <h6 id="editModalTitle" class="fw-bold mb-3 text-center" style="border-bottom:2px solid #61fd07;padding-bottom:8px;"></h6>
+    <div class="mb-2"><label class="form-label fw-semibold" id="editLabel1"></label><input id="editF1" class="form-control form-control-sm" /></div>
+    <div class="mb-2"><label class="form-label fw-semibold" id="editLabel2"></label><input id="editF2" class="form-control form-control-sm" /></div>
+    <div id="editF3wrap" class="mb-2" style="display:none"><label class="form-label fw-semibold" id="editLabel3"></label><input id="editF3" class="form-control form-control-sm" /></div>
+    <div class="d-flex justify-content-center gap-2 mt-3">
+      <button class="btn btn-success btn-sm" onclick="saveEdit()">Saglabāt</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeEditModal()">Atcelt</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<script>
+let db;
+
+initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${f}` }).then(SQL => {
+  db = new SQL.Database();
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Gramatas (
+      GramataID TEXT PRIMARY KEY,
+      Autors TEXT NOT NULL,
+      Nosaukums TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS Lietotaji (
+      LietotajaID TEXT PRIMARY KEY,
+      LietotajaVards TEXT NOT NULL,
+      RezervacijasVesture TEXT DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS Rezervacija (
+      RezervacijasID TEXT PRIMARY KEY,
+      LietotajaID TEXT REFERENCES Lietotaji(LietotajaID),
+      GramataID TEXT REFERENCES Gramatas(GramataID),
+      Datums TEXT
+    );
+  `);
+  // Sample data
+  db.run(`INSERT OR IGNORE INTO Gramatas VALUES ('G001','Rainis','Uguns un nakts'),('G002','Aspazija','Sidraba šķidrauts')`);
+  db.run(`INSERT OR IGNORE INTO Lietotaji VALUES ('L001','Anna Bērziņa',''),('L002','Jānis Kalniņš','')`);
+
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('mainContent').style.display = '';
+  refreshAll();
+});
+
+function setStatus(msg, isErr) {
+  const el = document.getElementById('status');
+  el.style.color = isErr ? 'red' : 'green';
+  el.textContent = msg;
+  setTimeout(() => el.textContent = '', 3000);
+}
+
+function query(sql, params=[]) {
+  try { return db.exec(sql, params); } catch(e) { setStatus('Kļūda: ' + e.message, true); return []; }
+}
+
+function renderTable(tableId, results) {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  tbody.innerHTML = '';
+  if (!results.length || !results[0].values.length) {
+    tbody.innerHTML = '<tr><td colspan="99" class="text-center text-muted">Nav ierakstu</td></tr>';
+    return;
+  }
+  results[0].values.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = row.map(v => `<td>${v ?? ''}</td>`).join('');
+    tbody.appendChild(tr);
+  });
+}
+
+// ---- GRĀMATAS ----
+function addGramata() {
+  const id = document.getElementById('g_id').value.trim();
+  const autors = document.getElementById('g_autors').value.trim();
+  const nos = document.getElementById('g_nosaukums').value.trim();
+  if (!id || !autors || !nos) return setStatus('Aizpildi visus laukus!', true);
+  try {
+    db.run('INSERT INTO Gramatas VALUES (?,?,?)', [id, autors, nos]);
+    ['g_id','g_autors','g_nosaukums'].forEach(x => document.getElementById(x).value='');
+    setStatus('Grāmata pievienota!');
+    refreshAll();
+  } catch(e) { setStatus('Kļūda: ' + e.message, true); }
+}
+
+function loadGramatas() {
+  const res = query('SELECT GramataID, Autors, Nosaukums FROM Gramatas');
+  const tbody = document.querySelector('#tbl-gramatas tbody');
+  tbody.innerHTML = '';
+  if (!res.length || !res[0].values.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nav grāmatu</td></tr>'; return;
+  }
+  res[0].values.forEach(([gid, autors, nos]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${gid}</td><td>${autors}</td><td>${nos}</td>
+      <td class="d-flex gap-1 justify-content-center">
+        <button class="btn btn-warning btn-sm" onclick="openEditGramata('${gid}','${autors.replace(/'/g,"\\'")}','${nos.replace(/'/g,"\\'")}')">Labot</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRow('Gramatas','GramataID','${gid}')">Dzēst</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ---- LIETOTĀJI ----
+function addLietotajs() {
+  const id = document.getElementById('l_id').value.trim();
+  const vards = document.getElementById('l_vards').value.trim();
+  if (!id || !vards) return setStatus('Aizpildi visus laukus!', true);
+  try {
+    db.run('INSERT INTO Lietotaji VALUES (?,?,?)', [id, vards, '']);
+    ['l_id','l_vards'].forEach(x => document.getElementById(x).value='');
+    setStatus('Lietotājs pievienots!');
+    refreshAll();
+  } catch(e) { setStatus('Kļūda: ' + e.message, true); }
+}
+
+function loadLietotaji() {
+  const res = query('SELECT LietotajaID, LietotajaVards, RezervacijasVesture FROM Lietotaji');
+  const tbody = document.querySelector('#tbl-lietotaji tbody');
+  tbody.innerHTML = '';
+  if (!res.length || !res[0].values.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nav lietotāju</td></tr>'; return;
+  }
+  res[0].values.forEach(([lid, vards, vest]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${lid}</td><td>${vards}</td><td>${vest||'-'}</td>
+      <td class="d-flex gap-1 justify-content-center">
+        <button class="btn btn-warning btn-sm" onclick="openEditLietotajs('${lid}','${vards.replace(/'/g,"\\'")}')">Labot</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRow('Lietotaji','LietotajaID','${lid}')">Dzēst</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ---- REZERVĀCIJAS ----
+function addRezervacija() {
+  const rid = document.getElementById('r_id').value.trim();
+  const lid = document.getElementById('r_lietotajs').value;
+  const gid = document.getElementById('r_gramata').value;
+  if (!rid || !lid || !gid) return setStatus('Aizpildi visus laukus!', true);
+  const datums = new Date().toISOString().slice(0,10);
+  try {
+    db.run('INSERT INTO Rezervacija VALUES (?,?,?,?)', [rid, lid, gid, datums]);
+    // Update vesture
+    const prev = query('SELECT RezervacijasVesture FROM Lietotaji WHERE LietotajaID=?', [lid]);
+    const oldVest = prev[0]?.values[0]?.[0] || '';
+    db.run('UPDATE Lietotaji SET RezervacijasVesture=? WHERE LietotajaID=?', [oldVest ? oldVest+','+rid : rid, lid]);
+    document.getElementById('r_id').value='';
+    setStatus('Rezervācija pievienota!');
+    refreshAll();
+  } catch(e) { setStatus('Kļūda: ' + e.message, true); }
+}
+
+function loadRezervacijas() {
+  const res = query(`
+    SELECT r.RezervacijasID, l.LietotajaVards, g.Nosaukums, r.Datums
+    FROM Rezervacija r
+    LEFT JOIN Lietotaji l ON r.LietotajaID=l.LietotajaID
+    LEFT JOIN Gramatas g ON r.GramataID=g.GramataID
+  `);
+  const tbody = document.querySelector('#tbl-rezervacijas tbody');
+  tbody.innerHTML = '';
+  if (!res.length || !res[0].values.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nav rezervāciju</td></tr>'; return;
+  }
+  res[0].values.forEach(([rid, vards, nos, dat]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${rid}</td><td>${vards||'?'}</td><td>${nos||'?'}</td><td>${dat}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRow('Rezervacija','RezervacijasID','${rid}')">Dzēst</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteRow(table, col, val) {
+  if (!confirm(`Dzēst ierakstu ${val}?`)) return;
+  try { db.run(`DELETE FROM ${table} WHERE ${col}=?`, [val]); setStatus('Ieraksts dzēsts!'); refreshAll(); }
+  catch(e) { setStatus('Kļūda: '+e.message, true); }
+}
+
+// ---- DROPDOWNS ----
+function refreshDropdowns() {
+  const gSel = document.getElementById('r_gramata');
+  const lSel = document.getElementById('r_lietotajs');
+  const gs = query('SELECT GramataID, Nosaukums FROM Gramatas');
+  const ls = query('SELECT LietotajaID, LietotajaVards FROM Lietotaji');
+  gSel.innerHTML = '<option value="">-- Grāmata --</option>';
+  ls.length && ls[0].values.forEach(([id,n]) => { lSel.innerHTML += `<option value="${id}">${id} – ${n}</option>`; });
+  gs.length && gs[0].values.forEach(([id,n]) => { gSel.innerHTML += `<option value="${id}">${id} – ${n}</option>`; });
+  lSel.innerHTML = '<option value="">-- Lietotājs --</option>';
+  ls.length && ls[0].values.forEach(([id,n]) => { lSel.innerHTML += `<option value="${id}">${id} – ${n}</option>`; });
+}
+
+function refreshAll() { loadGramatas(); loadLietotaji(); loadRezervacijas(); refreshDropdowns(); }
+
+// ---- SQL konsole ----
+function runSQL() {
+  const sql = document.getElementById('sqlInput').value;
+  const out = document.getElementById('sqlOutput');
+  try {
+    const res = db.exec(sql);
+    if (!res.length) { out.textContent = '✅ Izpildīts (nav rezultātu)'; refreshAll(); return; }
+    const rows = res[0];
+    let txt = rows.columns.join(' | ') + '\n' + '-'.repeat(60) + '\n';
+    rows.values.forEach(r => txt += r.join(' | ') + '\n');
+    out.textContent = txt;
+    refreshAll();
+  } catch(e) { out.textContent = '❌ Kļūda: ' + e.message; }
+}
+
+// ---- EDIT MODAL ----
+let editMode = null; // 'gramata' or 'lietotajs'
+let editOrigId = null;
+
+function openEditModal(title, l1, v1, l2, v2, l3, v3, mode, origId) {
+  editMode = mode; editOrigId = origId;
+  document.getElementById('editModalTitle').textContent = title;
+  document.getElementById('editLabel1').textContent = l1;
+  document.getElementById('editF1').value = v1;
+  document.getElementById('editLabel2').textContent = l2;
+  document.getElementById('editF2').value = v2;
+  const wrap = document.getElementById('editF3wrap');
+  if (l3 !== undefined) {
+    wrap.style.display = '';
+    document.getElementById('editLabel3').textContent = l3;
+    document.getElementById('editF3').value = v3;
+  } else { wrap.style.display = 'none'; }
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() { document.getElementById('editModal').style.display = 'none'; }
+
+function openEditGramata(gid, autors, nos) {
+  openEditModal('✏️ Labot grāmatu', 'GramataID:', gid, 'Autors:', autors, 'Nosaukums:', nos, 'gramata', gid);
+}
+
+function openEditLietotajs(lid, vards) {
+  openEditModal('✏️ Labot lietotāju', 'LietotajaID:', lid, 'Vārds:', vards, undefined, undefined, 'lietotajs', lid);
+}
+
+function saveEdit() {
+  const f1 = document.getElementById('editF1').value.trim();
+  const f2 = document.getElementById('editF2').value.trim();
+  const f3 = document.getElementById('editF3').value.trim();
+  if (!f1 || !f2) return setStatus('Aizpildi visus laukus!', true);
+  try {
+    if (editMode === 'gramata') {
+      if (!f3) return setStatus('Aizpildi nosaukumu!', true);
+      // If ID changed, insert new + delete old
+      if (f1 !== editOrigId) {
+        db.run('INSERT INTO Gramatas VALUES (?,?,?)', [f1, f2, f3]);
+        db.run('UPDATE Rezervacija SET GramataID=? WHERE GramataID=?', [f1, editOrigId]);
+        db.run('DELETE FROM Gramatas WHERE GramataID=?', [editOrigId]);
+      } else {
+        db.run('UPDATE Gramatas SET Autors=?, Nosaukums=? WHERE GramataID=?', [f2, f3, editOrigId]);
+      }
+      setStatus('Grāmata atjaunināta!');
+    } else {
+      if (f1 !== editOrigId) {
+        db.run('INSERT INTO Lietotaji SELECT ?,?,RezervacijasVesture FROM Lietotaji WHERE LietotajaID=?', [f1, f2, editOrigId]);
+        db.run('UPDATE Rezervacija SET LietotajaID=? WHERE LietotajaID=?', [f1, editOrigId]);
+        db.run('DELETE FROM Lietotaji WHERE LietotajaID=?', [editOrigId]);
+      } else {
+        db.run('UPDATE Lietotaji SET LietotajaVards=? WHERE LietotajaID=?', [f2, editOrigId]);
+      }
+      setStatus('Lietotājs atjaunināts!');
+    }
+    closeEditModal();
+    refreshAll();
+  } catch(e) { setStatus('Kļūda: ' + e.message, true); }
+}
+
+// close modal on backdrop click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+function showTab(name) {
+  ['gramatas','lietotaji','rezervacijas','sql'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['gramatas','lietotaji','rezervacijas','sql'][i]===name);
+  });
+}
+</script>
+</body>
+</html>
