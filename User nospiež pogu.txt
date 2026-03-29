@@ -1,0 +1,31 @@
+User nospiež pogu
+      ↓
+HTML onclick="addGramata()"
+      ↓
+JavaScript funkcija
+      ↓
+db.run() / db.exec()   ← šī IR savienojuma vieta
+      ↓
+sql.js (SQLite operatīvajā atmiņā)
+      ↓
+JS nolasa rezultātu → atjaunina HTML tabulu
+1. Dzinējs ielādējas
+javascriptinitSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${f}` })
+Tas lejupielādē SQLite (kā WebAssembly) no interneta uz pārlūkprogrammu.
+
+2. Datubāze tiek izveidota atmiņā
+javascriptdb = new SQL.Database();
+Šī ir "datubāze" — tā ir tikai mainīgais, kas atrodas operatīvajā atmiņā.
+
+3. HTML pogas izsauc JS funkcijas
+html<button onclick="addGramata()">Pievienot</button>
+↓
+javascriptfunction addGramata() {
+    db.run('INSERT INTO Gramatas VALUES (?,?,?)', [...])
+Poga → aktivizē funkciju → kas runā ar db
+
+4. JS nolasa no db un ieraksta HTML tabulā
+javascriptconst res = db.exec('SELECT * FROM Gramatas')
+// tad izveido <tr><td>...</td></tr> rindas tabulā
+
+Savienojuma vieta ir db — tas ir globāls mainīgais, kuru koplieto gan HTML (caur onclick), gan visas JS funkcijas. Nav nekāda kabeļa, URL vai paroles — viss ir vienā failā, vienā cilnē, vienā mainīgajā.
